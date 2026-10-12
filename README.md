@@ -116,6 +116,7 @@ To transcribe a recording on the Mac (Parakeet v3 speech-to-text + speaker diari
 ./pa run                 # foreground, through PA.app (asks for the mic); Ctrl-C stops cleanly
 ./install.sh             # LaunchAgents (pa run + menu bar app): start at login, restart on crash; log ~/Library/Logs/com.riuna.pa.log
 ./install.sh --uninstall
+./migrate-bundle-id.sh   # once, if you installed before the rename from com.bitofant.pa
 ```
 
 Settings live in `~/Library/Application Support/com.riuna.pa/config.json`. `pa run` re-reads the file every minute:
