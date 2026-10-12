@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
 	<key>CFBundleIdentifier</key>
-	<string>com.bitofant.pa.menu</string>
+	<string>com.riuna.pa.menu</string>
 	<key>CFBundleName</key>
 	<string>PA Menu</string>
 	<key>CFBundleExecutable</key>

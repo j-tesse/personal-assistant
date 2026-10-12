@@ -1,6 +1,6 @@
 import Foundation
 
-public let bundleID = "com.bitofant.pa"
+public let bundleID = "com.riuna.pa"
 
 /// Non-secret settings in ~/Library/Application Support/<bundle id>/config.json.
 public struct AgentConfig: Codable, Equatable, Sendable {

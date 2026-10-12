@@ -8,7 +8,7 @@ set -euo pipefail
 FA_TAG=v0.17.4  # keep in sync with Package.swift
 dir=${1:-$HOME/pa-test-capture}
 stamp=${2:-}
-cache="$HOME/Library/Caches/com.bitofant.pa/FluidAudio-$FA_TAG"
+cache="$HOME/Library/Caches/com.riuna.pa/FluidAudio-$FA_TAG"
 
 if [ -z "$stamp" ]; then
   # Newest pa-<yyyyMMdd-HHmmss>-*.wav; stamps sort lexically = chronologically.

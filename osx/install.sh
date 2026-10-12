@@ -1,11 +1,11 @@
 #!/bin/bash
-# Install/remove the LaunchAgents: `pa run` (com.bitofant.pa) + menu bar app (com.bitofant.pa.menu).
+# Install/remove the LaunchAgents: `pa run` (com.riuna.pa) + menu bar app (com.riuna.pa.menu).
 # osx/install.sh [--uninstall]. bash 3.2 (stock macOS).
 # Runs osx/build/{PA,PAMenu}.app in place (rebuilds apply on restart: `launchctl kickstart -k gui/$UID/<label>`).
 # Grant permissions first (prompts only show for an interactive launch): osx/pa calendars, osx/pa test-capture --seconds 5.
 set -euo pipefail
 
-label=com.bitofant.pa
+label=com.riuna.pa
 menu_label=$label.menu
 here=$(cd "$(dirname "$0")" && pwd)
 bin="$here/build/PA.app/Contents/MacOS/pa"
@@ -16,6 +16,23 @@ plist_of() { echo "$HOME/Library/LaunchAgents/$1.plist"; }
 
 # bootout of a not-loaded agent fails → ignore.
 for l in "$label" "$menu_label"; do launchctl bootout "$domain/$l" 2>/dev/null || true; done
+
+# Pre-rename id (2026-10-12): old daemon would record alongside the new one (separate run.lock).
+old_label=com.bitofant.pa
+for l in "$old_label" "$old_label.menu"; do
+  launchctl bootout "$domain/$l" 2>/dev/null || true
+  rm -f "$(plist_of "$l")"
+done
+old_support="$HOME/Library/Application Support/$old_label"
+new_support="$HOME/Library/Application Support/$label"
+if [ -d "$old_support" ]; then
+  if [ -e "$new_support" ]; then
+    echo "Both $old_support and $new_support exist: merge by hand (config.json, recordings/, upload-queue/)." >&2
+  else
+    mv "$old_support" "$new_support"
+    echo "Moved $old_support → $new_support"
+  fi
+fi
 
 if [ "${1:-}" = "--uninstall" ]; then
   rm -f "$(plist_of "$label")" "$(plist_of "$menu_label")"

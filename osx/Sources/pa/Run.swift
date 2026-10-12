@@ -55,7 +55,7 @@ func makeUploadQueue() -> UploadQueue {
 
 private let logger = Logger(subsystem: bundleID, category: "run")
 
-/// stdout (→ ~/Library/Logs/com.bitofant.pa.log under launchd) + unified log (`log stream --predicate 'subsystem == "com.bitofant.pa"'`).
+/// stdout (→ ~/Library/Logs/com.riuna.pa.log under launchd) + unified log (`log stream --predicate 'subsystem == "com.riuna.pa"'`).
 func daemonLog(_ s: String) {
     print("\(ISO8601DateFormatter().string(from: Date())) \(s)")
     // Not a TTY under launchd → block-buffered; flush so the log file is live.

@@ -4,7 +4,7 @@ set -euo pipefail
 cd "$(dirname "$0")"
 
 IDENTITY="${1:-PA Local Signing}"
-BUNDLE_ID="com.bitofant.pa"
+BUNDLE_ID="com.riuna.pa"
 APP="build/PA.app"
 
 # No -v: an untrusted self-signed cert is "invalid" to find-identity but signs fine.

@@ -62,7 +62,7 @@ public let usage = """
       pa mics
           List input devices: UID<TAB>name<TAB>flags (default,selected). Interactive: osx/pick-mic.sh.
       pa set-mic (UID | --default)
-          Persist the mic to record from (config.json in ~/Library/Application Support/com.bitofant.pa).
+          Persist the mic to record from (config.json in ~/Library/Application Support/com.riuna.pa).
       pa pair <server-url> <account> [--name DEVICE]
           Pair with the server; shows a code to enter in the web UI, waits for approval. Token → Keychain.
       pa status

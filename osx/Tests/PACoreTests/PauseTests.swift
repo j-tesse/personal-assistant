@@ -125,7 +125,7 @@ private func tempDir() -> URL {
         #expect(p.noteRequest.path == "/x/note-request.json")
         #expect(p.pause.path == "/x/pause.json")
         #expect(p.runLock.path == "/x/run.lock")
-        #expect(AgentPaths.default.base.path.hasSuffix("Library/Application Support/com.bitofant.pa"))
+        #expect(AgentPaths.default.base.path.hasSuffix("Library/Application Support/com.riuna.pa"))
     }
 
     @Test func lockProbe() {
