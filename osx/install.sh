@@ -18,20 +18,9 @@ plist_of() { echo "$HOME/Library/LaunchAgents/$1.plist"; }
 for l in "$label" "$menu_label"; do launchctl bootout "$domain/$l" 2>/dev/null || true; done
 
 # Pre-rename id (2026-10-12): old daemon would record alongside the new one (separate run.lock).
-old_label=com.bitofant.pa
-for l in "$old_label" "$old_label.menu"; do
-  launchctl bootout "$domain/$l" 2>/dev/null || true
-  rm -f "$(plist_of "$l")"
-done
-old_support="$HOME/Library/Application Support/$old_label"
-new_support="$HOME/Library/Application Support/$label"
-if [ -d "$old_support" ]; then
-  if [ -e "$new_support" ]; then
-    echo "Both $old_support and $new_support exist: merge by hand (config.json, recordings/, upload-queue/)." >&2
-  else
-    mv "$old_support" "$new_support"
-    echo "Moved $old_support → $new_support"
-  fi
+if [ -e "$(plist_of com.bitofant.pa)" ] || [ -d "$HOME/Library/Application Support/com.bitofant.pa" ]; then
+  echo "Old com.bitofant.pa install found → run osx/migrate-bundle-id.sh first." >&2
+  exit 1
 fi
 
 if [ "${1:-}" = "--uninstall" ]; then
