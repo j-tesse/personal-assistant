@@ -86,7 +86,7 @@ swift test             # pure unit tests (on the Linux dev box: osx/test-linux.s
 
 `test-capture` records all system audio through a global Core Audio tap, plus your mic, into two WAVs in `~/pa-test-capture/`. It then prints peak/RMS levels for each stream. If a stream is flagged "all zeros", the permission was probably denied. Check System Settings → Privacy & Security → Microphone / Screen & System Audio Recording. It prints a progress line every second, so you can see when a stream stops advancing. To isolate a problem, use `--no-mic` or `--no-system` to record one stream only.
 
-To record from a mic other than the system default, run `osx/pick-mic.sh`. It lists the input devices, lets you pick one by number, and saves the choice to `~/Library/Application Support/com.bitofant.pa/config.json`, where later runs pick it up. Choose `0` to go back to the system default. If the saved mic is unplugged, `pa` falls back to the system default.
+To record from a mic other than the system default, run `osx/pick-mic.sh`. It lists the input devices, lets you pick one by number, and saves the choice to `~/Library/Application Support/com.riuna.pa/config.json`, where later runs pick it up. Choose `0` to go back to the system default. If the saved mic is unplugged, `pa` falls back to the system default.
 
 To pair the Mac with your server account (the account must be enabled in the server's `config.json`), run:
 
@@ -105,7 +105,7 @@ To transcribe a recording on the Mac (Parakeet v3 speech-to-text + speaker diari
 ./pa queue               # recordings not yet transcribed + pending/failed uploads
 ```
 
-`pa transcribe` labels the mic stream as you (`--me NAME`, default: your macOS full name) and splits the system stream into `Speaker 1`, `Speaker 2`, …. Use `--stamp yyyyMMdd-HHmmss` to pick an older recording and `--no-diarize` to skip speaker separation. Re-running on the same recording keeps its id, so a re-upload replaces the transcript instead of duplicating it. Uploads go through a queue on disk (`~/Library/Application Support/com.bitofant.pa/upload-queue/`): if the server is unreachable, `pa run` retries with backoff; a revoked or unpaired device pauses the queue until you `pa pair` again; uploads the server rejects as invalid move to `failed/`. If you deleted that transcript in the web UI, the upload is refused (and dropped from the queue); delete the `-transcript.json` file to transcribe it again as a new transcript.
+`pa transcribe` labels the mic stream as you (`--me NAME`, default: your macOS full name) and splits the system stream into `Speaker 1`, `Speaker 2`, …. Use `--stamp yyyyMMdd-HHmmss` to pick an older recording and `--no-diarize` to skip speaker separation. Re-running on the same recording keeps its id, so a re-upload replaces the transcript instead of duplicating it. Uploads go through a queue on disk (`~/Library/Application Support/com.riuna.pa/upload-queue/`): if the server is unreachable, `pa run` retries with backoff; a revoked or unpaired device pauses the queue until you `pa pair` again; uploads the server rejects as invalid move to `failed/`. If you deleted that transcript in the web UI, the upload is refused (and dropped from the queue); delete the `-transcript.json` file to transcribe it again as a new transcript.
 
 ### Daemon (`pa run`)
 
@@ -114,11 +114,11 @@ To transcribe a recording on the Mac (Parakeet v3 speech-to-text + speaker diari
 ```sh
 ./pa calendars           # Source/Name of every calendar (first run asks for Calendar access)
 ./pa run                 # foreground, through PA.app (asks for the mic); Ctrl-C stops cleanly
-./install.sh             # LaunchAgents (pa run + menu bar app): start at login, restart on crash; log ~/Library/Logs/com.bitofant.pa.log
+./install.sh             # LaunchAgents (pa run + menu bar app): start at login, restart on crash; log ~/Library/Logs/com.riuna.pa.log
 ./install.sh --uninstall
 ```
 
-Settings live in `~/Library/Application Support/com.bitofant.pa/config.json`. `pa run` re-reads the file every minute:
+Settings live in `~/Library/Application Support/com.riuna.pa/config.json`. `pa run` re-reads the file every minute:
 
 - `workCalendars`: calendars whose events label recordings, as `Name` or `Source/Name` (copy them from `pa calendars`). If this is empty, every recording is ad-hoc, so titles from personal events never reach the server.
 - `ignoreMicApps`: bundle ids whose mic use doesn't mean "in a call". The log names the processes holding the mic whenever that changes.

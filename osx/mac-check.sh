@@ -189,10 +189,10 @@ st_build() {
   run swift-test bash -c "cd '$osx' && swift test"
   # First compile of the FluidAudio code: expect errors in Sources/pa/FluidEngines.swift / Transcribe.swift.
   run build "$osx/build.sh" || { echo "Fix the errors (note each fix + why), then: osx/mac-check.sh --from build"; finish; }
-  if codesign -dv "$osx/build/PA.app" 2>&1 | grep -q '^Identifier=com.bitofant.pa$'; then pass "signed as com.bitofant.pa"
-  else fail "PA.app not signed as com.bitofant.pa"; fi
-  if codesign -dv "$osx/build/PAMenu.app" 2>&1 | grep -q '^Identifier=com.bitofant.pa.menu$'; then pass "signed as com.bitofant.pa.menu"
-  else fail "PAMenu.app not signed as com.bitofant.pa.menu"; fi
+  if codesign -dv "$osx/build/PA.app" 2>&1 | grep -q '^Identifier=com.riuna.pa$'; then pass "signed as com.riuna.pa"
+  else fail "PA.app not signed as com.riuna.pa"; fi
+  if codesign -dv "$osx/build/PAMenu.app" 2>&1 | grep -q '^Identifier=com.riuna.pa.menu$'; then pass "signed as com.riuna.pa.menu"
+  else fail "PAMenu.app not signed as com.riuna.pa.menu"; fi
 }
 
 st_capture() {
@@ -203,7 +203,7 @@ st_capture() {
   First run: macOS asks for Microphone + System Audio Recording — allow both."
   run capture "$pa" test-capture --seconds "$seconds"
   stamp=$(newest_stamp)
-  expect capture 'bundle: com\.bitofant\.pa' "ran as PA.app (TCC attributed to PA)"
+  expect capture 'bundle: com\.riuna\.pa' "ran as PA.app (TCC attributed to PA)"
   if grep -q 'all zeros' "$report/capture.log"; then fail "a stream is all zeros (permission denied / nothing playing) → capture.log"
   else pass "both streams have signal"; fi
   ask "Permission prompts (if any) named PA, not Terminal"
@@ -324,14 +324,14 @@ st_daemon() {
   need_build
   [ -n "$server" ] || need_server
   need_paired
-  local log="$report/daemon.log" recs="$HOME/Library/Application Support/com.bitofant.pa/recordings"
-  if launchctl print "gui/$(id -u)/com.bitofant.pa" >/dev/null 2>&1; then
+  local log="$report/daemon.log" recs="$HOME/Library/Application Support/com.riuna.pa/recordings"
+  if launchctl print "gui/$(id -u)/com.riuna.pa" >/dev/null 2>&1; then
     pause "The LaunchAgent is installed: this test needs it stopped. Run osx/install.sh --uninstall in another terminal."
   fi
   echo "First time: allow Calendars for PA."
   run calendars "$pa" calendars && expect calendars $'\t(work|-)$' "pa calendars lists calendars"
   ask "Your work calendar is in that list"
-  pause "Put your work calendar(s) (first column above) in \"workCalendars\" in ~/Library/Application Support/com.bitofant.pa/config.json, e.g. \"workCalendars\": [\"Exchange/Calendar\"]. Skip this to test ad-hoc only."
+  pause "Put your work calendar(s) (first column above) in \"workCalendars\" in ~/Library/Application Support/com.riuna.pa/config.json, e.g. \"workCalendars\": [\"Exchange/Calendar\"]. Skip this to test ad-hoc only."
   run calendars-after "$pa" calendars
   grep -q $'\twork$' "$report/calendars-after.log" && pass "a work calendar is configured" || note "  - no work calendar → recordings are ad-hoc"
 
@@ -383,7 +383,7 @@ st_note() {
   [ -n "$server" ] || need_server
   need_paired
   local log="$report/note.log"
-  if launchctl print "gui/$(id -u)/com.bitofant.pa" >/dev/null 2>&1; then
+  if launchctl print "gui/$(id -u)/com.riuna.pa" >/dev/null 2>&1; then
     pause "The LaunchAgent is installed: this test needs it stopped. Run osx/install.sh --uninstall in another terminal."
   fi
   expect_exit note-no-daemon 1 "$pa" note start
@@ -428,7 +428,7 @@ st_menu() {
   need_build
   local log="$report/menu.log" menu="$osx/build/PAMenu.app"
   [ -x "$menu/Contents/MacOS/pa-menu" ] || { fail "no $menu (osx/build.sh)"; return; }
-  if launchctl print "gui/$(id -u)/com.bitofant.pa" >/dev/null 2>&1; then
+  if launchctl print "gui/$(id -u)/com.riuna.pa" >/dev/null 2>&1; then
     pause "The LaunchAgent is installed: this test needs it stopped. Run osx/install.sh --uninstall in another terminal."
   fi
   "$pa" resume >/dev/null 2>&1
@@ -476,7 +476,7 @@ st_live() {
   [ -n "$server" ] || need_server
   need_paired
   local log="$report/live.log" id
-  if launchctl print "gui/$(id -u)/com.bitofant.pa" >/dev/null 2>&1; then
+  if launchctl print "gui/$(id -u)/com.riuna.pa" >/dev/null 2>&1; then
     pause "The LaunchAgent is installed: this test needs it stopped. Run osx/install.sh --uninstall in another terminal."
   fi
   : > "$log"

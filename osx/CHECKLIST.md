@@ -38,7 +38,7 @@ Stages: `prereqs build capture bench transcribe pair upload queue daemon note me
   `Calendars.swift` / `Signals.swift` / `CaptureRecorder.swift`): fix, note each fix + why, then
   `osx/mac-check.sh --only build …`
 - After `daemon` passes: `osx/install.sh` (LaunchAgents for `pa run` + the menu bar app, start at login; log
-  `~/Library/Logs/com.bitofant.pa.log`). Check once: menu → Quit stays quit until next login; `kill` of `pa-menu`
+  `~/Library/Logs/com.riuna.pa.log`). Check once: menu → Quit stays quit until next login; `kill` of `pa-menu`
   brings it back (KeepAlive on crash only).
 - Redo one stage: `--only capture`, `--only queue`, …; longer recording: `--seconds 600`
 - Other mic: `osx/pick-mic.sh`

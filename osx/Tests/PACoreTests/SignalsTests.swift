@@ -6,7 +6,7 @@ import Testing
     @Test func micUsersExcludeSelfIgnoredAndIdle() {
         let clients = [
             AudioClient(pid: 10, bundleID: "us.zoom.xos", runningInput: true),
-            AudioClient(pid: 11, bundleID: "com.bitofant.pa", runningInput: true),
+            AudioClient(pid: 11, bundleID: "com.riuna.pa", runningInput: true),
             AudioClient(pid: 12, bundleID: "com.apple.Siri", runningInput: true),
             AudioClient(pid: 13, bundleID: "com.spotify.client", runningInput: false),
             AudioClient(pid: 14, bundleID: nil, runningInput: true),
