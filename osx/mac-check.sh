@@ -189,10 +189,15 @@ st_build() {
   run swift-test bash -c "cd '$osx' && swift test"
   # First compile of the FluidAudio code: expect errors in Sources/pa/FluidEngines.swift / Transcribe.swift.
   run build "$osx/build.sh" || { echo "Fix the errors (note each fix + why), then: osx/mac-check.sh --from build"; finish; }
-  if codesign -dv "$osx/build/PA.app" 2>&1 | grep -q '^Identifier=com.riuna.pa$'; then pass "signed as com.riuna.pa"
-  else fail "PA.app not signed as com.riuna.pa"; fi
-  if codesign -dv "$osx/build/PAMenu.app" 2>&1 | grep -q '^Identifier=com.riuna.pa.menu$'; then pass "signed as com.riuna.pa.menu"
-  else fail "PAMenu.app not signed as com.riuna.pa.menu"; fi
+  check_signed PA.app com.riuna.pa
+  check_signed PAMenu.app com.riuna.pa.menu
+}
+
+# Mismatch → codesign output into signing.log (why it failed).
+check_signed() {
+  local out; out=$(codesign -dvv "$osx/build/$1" 2>&1)
+  if echo "$out" | grep -qx "Identifier=$2"; then pass "$1 signed as $2"
+  else { echo "== $1 (expected $2)"; echo "$out"; } >> "$report/signing.log"; fail "$1 not signed as $2 → signing.log"; fi
 }
 
 st_capture() {
@@ -316,6 +321,7 @@ stop_daemon() {
   kill -TERM "$run_pid" 2>/dev/null; local i=0
   while pgrep -f "^$bin run\$" >/dev/null && [ $i -lt 15 ]; do sleep 1; i=$((i + 1)); done
   if pgrep -f "^$bin run\$" >/dev/null; then fail "pa run still running 15s after TERM"; pkill -KILL -f "^$bin run\$"
+    note "    killed → WAV headers unfinalized; the next pa run start repairs them (repairWavHeader in recovery). A fail there = repair, not this stop."
   else pass "pa run stopped (${i}s)"; fi
   wait "$run_pid" 2>/dev/null; run_pid=
 }
@@ -343,7 +349,7 @@ st_daemon() {
   # 1. Normal call: mic in use by another app → record → stop after 2 min idle → transcribe → upload.
   pause "Start a call (Zoom/Teams/Meet test call, or anything else using the mic: e.g. a Voice Memos recording) with audio playing from the other side (or a video). Press a key once it runs."
   wait_for 30 "recording started when the mic came on" grep -qE 'recording [0-9a-f-]+ started' "$log"
-  grep -E 'mic: ' "$log" | tail -1 | sed 's/^/    /'
+  grep -E 'mic: .*meeting apps:' "$log" | tail -1 | sed 's/^/    /'
   ask "The last 'mic:' line above names your call app (not pa, not something always-on)"
   pause "Talk for ≥90 s (stay in the call), then END the call and press a key."
   wait_for 200 "recording stopped ~2 min after the call ended" grep -qE 'stopped \(inactive\)' "$log"
@@ -353,7 +359,13 @@ st_daemon() {
   ask "The new transcript is in the web UI: your words under your name, the other side as Speaker N"
   grep -q $'\twork$' "$report/calendars-after.log" &&
     ask "If the call was during a work event: transcript is linked to it (title/attendees); else ad-hoc"
-  ls "$recs" 2>/dev/null | grep -q '\.wav$' && fail "audio left in $recs after upload" || pass "audio deleted after transcription"
+  # Only this recording's WAVs: parked recordings keep their audio on purpose.
+  local id; id=$(grep -oE 'recording [0-9a-f-]+ started' "$log" | tail -1 | awk '{print $2}')
+  if [ -z "$id" ]; then fail "no recording id in daemon.log"
+  elif ls "$recs/$id"-*.wav >/dev/null 2>&1; then fail "audio of $id left in $recs after upload"
+  else pass "audio of $id deleted after transcription"; fi
+  local other; other=$(ls "$recs" 2>/dev/null | grep '\.wav$' | grep -v "^$id-")
+  [ -n "$other" ] && note "  - other WAVs in recordings/ (parked? see pa queue): $(echo $other)"
 
   # 2. SIGTERM mid-recording: kept (≥60 s active) + transcribed on the next start.
   pause "Start the call/mic app again and keep talking; press a key."

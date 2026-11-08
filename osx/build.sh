@@ -29,7 +29,8 @@ bundle() {
   cp "$BINDIR/$3" "$1/Contents/MacOS/$3"
   codesign --force --sign "$IDENTITY" --identifier "$4" "$1"
   codesign --verify --strict "$1"
-  echo "Built $1 ($(codesign -dv "$1" 2>&1 | grep -E '^Authority=' | head -1))"
+  # -dvv: plain -dv prints no Authority= line.
+  echo "Built $1 ($(codesign -dvv "$1" 2>&1 | grep -E '^(Identifier|Authority)=' | head -2 | paste -sd ' ' -))"
 }
 bundle "$APP" Info.plist pa "$BUNDLE_ID"
 # Own bundle id: LSUIElement (status item) only here; PA.app stays LSBackgroundOnly + keeps its TCC grants.
