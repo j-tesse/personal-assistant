@@ -105,7 +105,7 @@ func run(record: Bool) async throws {
             guard await acquireRunLock() else { return }
             let store = RecordingStore(dir: recordingsDir())
             do {
-                for m in try store.recoverInterrupted() { daemonLog("recording \(m.id) was interrupted (pa stopped) → transcribing what was saved") }
+                for m in try store.recoverInterrupted(log: daemonLog) { daemonLog("recording \(m.id) was interrupted (pa stopped) → transcribing what was saved") }
             } catch {
                 daemonLog("⚠️ recordings: \(error)")
             }
@@ -283,7 +283,12 @@ func enqueueAndTryUpload(_ u: TranscriptUpload) async throws {
     }
 }
 
-func listQueue() throws {
+func listQueue(retry: String?) throws {
+    if let retry {
+        let m = try RecordingStore(dir: recordingsDir()).retry(retry)
+        print("recording \(m.id): attempts reset; `pa run` transcribes it within 10 min (or at its next start)")
+        return
+    }
     let (recs, badRecs) = try RecordingStore(dir: recordingsDir()).all()
     for m in recs { print(formatRecordingLine(m)) }
     for name in badRecs { print("unreadable recordings/\(name)") }

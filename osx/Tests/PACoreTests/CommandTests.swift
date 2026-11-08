@@ -52,7 +52,10 @@ import Testing
         #expect(throws: UsageError.self) { try parseCommand(["upload"]) }
         #expect(try parseCommand(["run"]) == .run(record: true))
         #expect(try parseCommand(["run", "--no-record"]) == .run(record: false))
-        #expect(try parseCommand(["queue"]) == .queue)
+        #expect(try parseCommand(["queue"]) == .queue(retry: nil))
+        #expect(try parseCommand(["queue", "--retry", "dd3ce43d"]) == .queue(retry: "dd3ce43d"))
+        #expect(throws: UsageError.self) { try parseCommand(["queue", "--retry"]) }
+        #expect(throws: UsageError.self) { try parseCommand(["queue", "x"]) }
         #expect(try parseCommand(["pause"]) == .pause)
         #expect(try parseCommand(["resume"]) == .resume)
         #expect(throws: UsageError.self) { try parseCommand(["pause", "1h"]) }

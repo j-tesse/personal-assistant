@@ -103,6 +103,7 @@ To transcribe a recording on the Mac (Parakeet v3 speech-to-text + speaker diari
 ./pa transcribe          # newest capture → ~/pa-test-capture/pa-<stamp>-transcript.json
 ./pa transcribe --upload # …and queue it for upload to the paired server (tries once now)
 ./pa queue               # recordings not yet transcribed + pending/failed uploads
+./pa queue --retry <id>  # transcribe a failed recording again (id prefix is enough)
 ```
 
 `pa transcribe` labels the mic stream as you (`--me NAME`, default: your macOS full name) and splits the system stream into `Speaker 1`, `Speaker 2`, …. Use `--stamp yyyyMMdd-HHmmss` to pick an older recording and `--no-diarize` to skip speaker separation. Re-running on the same recording keeps its id, so a re-upload replaces the transcript instead of duplicating it. Uploads go through a queue on disk (`~/Library/Application Support/com.riuna.pa/upload-queue/`): if the server is unreachable, `pa run` retries with backoff; a revoked or unpaired device pauses the queue until you `pa pair` again; uploads the server rejects as invalid move to `failed/`. If you deleted that transcript in the web UI, the upload is refused (and dropped from the queue); delete the `-transcript.json` file to transcribe it again as a new transcript.
@@ -141,7 +142,7 @@ A note records only the mic (no system audio, so a video playing doesn't end up 
 
 **Pausing.** `./pa pause` (or Pause recording in the menu) stops automatic meeting recording until `./pa resume`. A meeting being recorded is stopped and kept, and the pause survives restarts. Spoken notes still work while paused. `./pa status` shows the current state on its first line.
 
-Recordings sit in `recordings/` (`<id>-mic.wav`, `<id>-system.wav`, `<id>.json`) until they are transcribed. If `pa` is killed mid-recording, the next start transcribes what was saved. A transcription that fails 3 times is left there and listed by `pa queue`. Only one `pa run` records at a time: a second one waits until the first exits. `pa run --no-record` only uploads the queue.
+Recordings sit in `recordings/` (`<id>-mic.wav`, `<id>-system.wav`, `<id>.json`) until they are transcribed. If `pa` is killed mid-recording, the next start repairs the WAV headers and transcribes what was saved. A transcription that fails 3 times is left there and listed by `pa queue`; `pa queue --retry <id>` tries it again. Only one `pa run` records at a time: a second one waits until the first exits. `pa run --no-record` only uploads the queue.
 
 Grant permissions before installing the LaunchAgent, because macOS only prompts for an interactive launch: run `./pa calendars` and `./pa test-capture --seconds 5`, then `./pa run` once.
 
