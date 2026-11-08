@@ -100,6 +100,7 @@ The repo has a few components:
   - Anything needing a live endpoint/process = `*.e2e.test.ts` via `npm run test:e2e`; self-skips when endpoint down; runs serially (one local LLM).
   - **Pure parse ⟂ impure I/O:** logic as pure functions (`parseX`, `buildPrompt`, `resolveInstructions`) unit-tested; thin `readX`/`fetchX` wrappers covered by e2e.
   - **TDD for new contracts** (API endpoints, wire types, job types): draft test → implement → run live, adjust test to real behavior → only then build UI.
+  - **Basics only (user decision 2026-11-07):** test the main path + the one failure that matters; no exhaustive edge-case suites, no extra stand-in harnesses, unless asked.
   - Mutation-check key tests: break the code, confirm the test fails.
   - Known: `llm.e2e` "live local LLM: embeddings" fails on the dev box (vLLM answers 404 on `/embeddings` but the `embedUp` probe says up); pre-existing, not a regression.
   - LLM tests: deterministic assertions (our parsing/plumbing) are the hard gate; model-quality checks are soft.
