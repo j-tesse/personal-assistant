@@ -41,9 +41,24 @@ touch "$tmp/out" "$tmp/err"
 tail -f "$tmp/out" & t1=$!
 tail -f "$tmp/err" >&2 & t2=$!
 cleanup() { sleep 0.5; kill "$t1" "$t2" 2>/dev/null || true; rm -rf "$tmp"; }
-# Ctrl-C only kills `open -W`, not the app it launched → forward it.
-trap 'kill -INT $(ours) 2>/dev/null || true; cleanup; exit 130' INT TERM
+# pa isn't our child (LaunchServices) → forward INT/TERM as INT, then wait until pa (= `open -W`) exits.
+# Poll for pa: a signal right after launch may come before it shows up in pgrep.
+forward() {
+  trap '' INT TERM
+  while kill -0 "$op" 2>/dev/null; do
+    ps=$(ours)
+    if [ -n "$ps" ]; then kill -INT $ps 2>/dev/null || true; break; fi
+    sleep 0.2
+  done
+  wait "$op" 2>/dev/null || true
+  cleanup
+  exit 130
+}
+trap forward INT TERM
 
-open -W --stdout "$tmp/out" --stderr "$tmp/err" "$app" --args "${args[@]}"
+# Background + `wait`: bash defers traps while a foreground child runs (TERM would wait for pa to exit
+# by itself); `wait` is interrupted → trap runs at once. Async `open` ignores SIGINT (non-interactive bash).
+open -W --stdout "$tmp/out" --stderr "$tmp/err" "$app" --args "${args[@]}" & op=$!
+wait "$op" || true
 cleanup
 # Note: `open -W` exits 0 whatever pa returned; read the output for errors.
