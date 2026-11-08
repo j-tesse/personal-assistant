@@ -26,8 +26,8 @@ struct PA {
                 try await run(record: record)
             case .calendars:
                 try await listCalendars()
-            case .queue:
-                try listQueue()
+            case .queue(let retry):
+                try listQueue(retry: retry)
             case .note(let action):
                 try await note(action)
             case .pause:

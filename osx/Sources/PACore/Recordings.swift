@@ -32,6 +32,11 @@ public struct RecordingMeta: Codable, Equatable, Sendable {
     }
 }
 
+public struct RecordingError: Error, Equatable, CustomStringConvertible {
+    public let description: String
+    public init(_ description: String) { self.description = description }
+}
+
 public enum RecordingLimits {
     /// Transcription attempts before a recording is parked (audio + sidecar kept, see `pa queue`).
     public static let maxAttempts = 3
@@ -102,6 +107,40 @@ public struct RecordingStore: Sendable {
         try delete(id)
     }
 
+    /// Fixes unfinalized WAV headers (kill -9 / crash); logs repairs + failures, never throws (decode error surfaces later).
+    public func repairAudio(_ id: String, log: (String) -> Void) {
+        let (mic, system) = audio(id)
+        for u in [mic, system].compactMap({ $0 }) {
+            do {
+                switch try repairWavHeader(u) {
+                case .consistent: break
+                case .repaired(let frames, let dropped):
+                    log("recording \(id): repaired WAV header of \(u.lastPathComponent) (\(frames) frames"
+                        + (dropped > 0 ? ", \(dropped) trailing bytes dropped)" : ")"))
+                case .notRepairable(let why):
+                    log("recording \(id): ⚠️ can't repair \(u.lastPathComponent): \(why)")
+                }
+            } catch {
+                log("recording \(id): ⚠️ can't repair \(u.lastPathComponent): \(error)")
+            }
+        }
+    }
+
+    /// `pa queue --retry`: attempts reset → a parked recording is transcribed again. `id` = full id or unique prefix.
+    @discardableResult
+    public func retry(_ id: String) throws -> RecordingMeta {
+        let key = id.lowercased()
+        let hits = try all().items.filter { $0.id.hasPrefix(key) }
+        guard !key.isEmpty, hits.count == 1, var m = hits.first else {
+            throw RecordingError(hits.count > 1 ? "\(id) matches \(hits.count) recordings" : "no recording \(id)")
+        }
+        guard m.endedAt != nil else { throw RecordingError("recording \(m.id) is still recording") }
+        m.attempts = 0
+        m.lastError = nil
+        try save(m)
+        return m
+    }
+
     /// Deletes kept audio older than `days`. Returns deleted file names.
     @discardableResult
     public func pruneKept(days: Int?, now: Date) throws -> [String] {
@@ -119,16 +158,18 @@ public struct RecordingStore: Sendable {
         return gone
     }
 
-    /// Recordings a previous pa process never stopped (crash, kill -9, reboot): end = last audio write (else start).
-    /// Call once at start, before recording anything.
+    /// Recordings a previous pa process never stopped (crash, kill -9, reboot): end = last audio write (else start),
+    /// WAV headers repaired (never finalized). Call once at start, before recording anything.
     @discardableResult
-    public func recoverInterrupted() throws -> [RecordingMeta] {
+    public func recoverInterrupted(log: (String) -> Void = { _ in }) throws -> [RecordingMeta] {
         var fixed: [RecordingMeta] = []
         for var m in try all().items where m.endedAt == nil {
             let (mic, system) = audio(m.id)
+            // mtimes before the repair: it rewrites the header → mtime = now.
             let mtimes = [mic, system].compactMap { $0 }.compactMap {
                 try? FileManager.default.attributesOfItem(atPath: $0.path)[.modificationDate] as? Date
             }
+            repairAudio(m.id, log: log)
             m.endedAt = max(mtimes.max() ?? m.startedAt, m.startedAt)
             try save(m)
             fixed.append(m)
@@ -327,6 +368,8 @@ public struct RecordingProcessor: Sendable {
             try? store.delete(m.id)
             return
         }
+        // Also fixes recordings parked before the repair existed (failed with invalidAudioData).
+        store.repairAudio(m.id, log: log)
         m.attempts += 1
         do { try store.save(m) } catch {
             log("recording \(m.id): can't update sidecar: \(error)")

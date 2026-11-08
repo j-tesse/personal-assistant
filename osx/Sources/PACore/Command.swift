@@ -17,8 +17,8 @@ public enum Command: Equatable, Sendable {
     case run(record: Bool)
     /// List calendars (`Source/Name`, work or not).
     case calendars
-    /// List pending + failed uploads.
-    case queue
+    /// List pending + failed uploads; retry = recording id (prefix) to unpark.
+    case queue(retry: String?)
     /// Spoken note: ask the running `pa run` to record the mic (start/stop/toggle) or show its state.
     case note(NoteAction)
     /// Stop/resume automatic meeting recording (`pause.json`; notes unaffected).
@@ -74,8 +74,9 @@ public let usage = """
           Upload queue retries with backoff, pauses on 401 until re-paired. --no-record: upload worker only.
       pa calendars
           List calendars as Source/Name<TAB>work|- ; put names in "workCalendars" in config.json.
-      pa queue
+      pa queue [--retry ID]
           List recordings not yet transcribed + queued uploads (pending, failed/).
+          --retry: reset a failed (parked) recording's attempts → `pa run` transcribes it again. ID prefix is enough.
       pa note (start | stop | toggle | status)
           Spoken note: the running `pa run` records the mic only (no system audio) until stopped; uploaded as a
           note (summarized as notes + todos). A call taking the mic ends it. Bind `toggle` to a key (Shortcuts).
@@ -149,9 +150,15 @@ public func parseCommand(_ args: [String]) throws(UsageError) -> Command {
         case ["--no-record"]: return .run(record: false)
         default: throw UsageError("run takes only --no-record")
         }
-    case "queue", "calendars":
-        guard args.count == 1 else { throw UsageError("\(sub) takes no arguments") }
-        return sub == "queue" ? .queue : .calendars
+    case "queue":
+        switch Array(args.dropFirst()) {
+        case []: return .queue(retry: nil)
+        case let a where a.count == 2 && a[0] == "--retry" && !a[1].isEmpty: return .queue(retry: a[1])
+        default: throw UsageError("queue takes only --retry ID")
+        }
+    case "calendars":
+        guard args.count == 1 else { throw UsageError("calendars takes no arguments") }
+        return .calendars
     case "note":
         guard args.count == 2, let a = NoteAction(rawValue: args[1]) else { throw UsageError("note needs start, stop, toggle or status") }
         return .note(a)
