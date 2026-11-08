@@ -186,11 +186,47 @@ st_prereqs() {
 }
 
 st_build() {
-  run swift-test bash -c "cd '$osx' && swift test"
+  swift_test
   # First compile of the FluidAudio code: expect errors in Sources/pa/FluidEngines.swift / Transcribe.swift.
   run build "$osx/build.sh" || { echo "Fix the errors (note each fix + why), then: osx/mac-check.sh --from build"; finish; }
   check_signed PA.app com.riuna.pa
   check_signed PAMenu.app com.riuna.pa.menu
+}
+
+# CLT-only Mac: plain `swift test` fails with "plugin for module 'TestingMacros' not found" (Swift 6.4, new build
+# system) → try workarounds in order, report the first that works. Each attempt → swift-test-N.log.
+swift_test() {
+  local clt=/Library/Developer/CommandLineTools tried="$clt/usr/lib/swift/host/plugins/testing" found
+  found=$(find "$clt" -name 'libTestingMacros*' 2>/dev/null | head -1)
+  found=${found:+$(dirname "$found")}
+  [ "$found" = "$tried" ] && found=  # same dir as attempt 2 → nothing new to try
+  try_swift_test 1 "--build-system native" --build-system native && return 0
+  [ $? -eq 2 ] && return 1
+  try_swift_test 2 "-plugin-path $tried" -Xswiftc -plugin-path -Xswiftc "$tried" && return 0
+  [ $? -eq 2 ] && return 1
+  if [ -n "$found" ]; then
+    try_swift_test 3 "-plugin-path $found (found)" -Xswiftc -plugin-path -Xswiftc "$found" && return 0
+    [ $? -eq 2 ] && return 1
+  else
+    note "  - swift test 3: no other libTestingMacros* under $clt"
+  fi
+  note "  - swift test (skipped): no workaround ran it on CLT → swift-test-*.log; PACore tests = Linux only (osx/test-linux.sh)"
+}
+
+# try_swift_test N DESC ARGS… → 0 passed, 2 ran but tests failed (stop trying), 1 didn't run (try next).
+try_swift_test() {
+  local n=$1 desc=$2 log="$report/swift-test-$n.log"; shift 2
+  echo "${b}\$ swift test $*${r}"
+  (cd "$osx" && swift test "$@") > "$log" 2>&1
+  local rc=$?
+  tail -5 "$log"
+  if [ "$rc" -eq 0 ]; then pass "swift test works with: $desc → swift-test-$n.log"; return 0; fi
+  # Swift Testing / XCTest failure summaries = tests ran, so it's a real failure, not the plugin problem.
+  if grep -qE 'Test run with [0-9]+ tests?.* failed|Executed [0-9]+ tests?, with [1-9][0-9]* failures?' "$log"; then
+    fail "swift test ($desc) ran, tests failed → swift-test-$n.log"; return 2
+  fi
+  note "  - swift test $n ($desc): didn't run (exit $rc) → swift-test-$n.log"
+  return 1
 }
 
 # Mismatch → codesign output into signing.log (why it failed).
