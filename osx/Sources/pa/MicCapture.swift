@@ -9,6 +9,10 @@ final class MicCapture: @unchecked Sendable {
     private let engine = AVAudioEngine()
     private var observer: NSObjectProtocol?
     private(set) var writer: WavWriter?
+    /// `pa run` → `daemonLog` (timestamped); test-capture → plain stdout.
+    private let log: @Sendable (String) -> Void
+
+    init(log: @escaping @Sendable (String) -> Void = { print($0) }) { self.log = log }
 
     /// `deviceUID` nil = system default input.
     func start(deviceUID: String?, writingTo url: URL, sink: (@Sendable (AVAudioPCMBuffer) -> Void)? = nil) throws {
@@ -16,14 +20,14 @@ final class MicCapture: @unchecked Sendable {
         var wanted: AudioObjectID?
         if let deviceUID {
             wanted = try listInputDevices().first(where: { $0.uid == deviceUID })?.objectID
-            if wanted == nil { print("mic: ⚠️ configured mic \(deviceUID) not connected → system default") }
+            if wanted == nil { log("mic: ⚠️ configured mic \(deviceUID) not connected → system default") }
         }
         if let wanted { try setDevice(input, wanted) }
         // Read format after switching device: changes channel count/rate.
         let format = input.outputFormat(forBus: 0)
         let actual = currentDevice(input)
-        print("mic: \(actual.map(deviceName) ?? "?"), \(describe(format)) → WAV \(describe(WavWriter.fileFormat))")
-        if let wanted, actual != wanted { print("mic: ⚠️ wanted \(deviceName(wanted)), unit reports another device") }
+        log("mic: \(actual.map(deviceName) ?? "?"), \(describe(format)) → WAV \(describe(WavWriter.fileFormat))")
+        if let wanted, actual != wanted { log("mic: ⚠️ wanted \(deviceName(wanted)), unit reports another device") }
         // Device/format switch stops the engine silently (live: fires when the tap aggregate is created) → restart.
         observer = NotificationCenter.default.addObserver(
             forName: .AVAudioEngineConfigurationChange, object: engine, queue: nil
@@ -40,17 +44,17 @@ final class MicCapture: @unchecked Sendable {
 
     private func configurationChanged() {
         let f = engine.inputNode.outputFormat(forBus: 0)
-        print("mic: ⚠️ engine configuration changed (running: \(engine.isRunning), now \(describe(f)))")
+        log("mic: ⚠️ engine configuration changed (running: \(engine.isRunning), now \(describe(f)))")
         // Tap + writer were set up for the start format; a different one would be misread.
         guard let w = writer, f.sampleRate == w.inputFormat.sampleRate, f.channelCount == w.inputFormat.channelCount else {
-            print("mic: ⚠️ format changed mid-recording → not restarting")
+            log("mic: ⚠️ format changed mid-recording → not restarting")
             return
         }
         do {
             try engine.start()
-            print("mic: engine restarted")
+            log("mic: engine restarted")
         } catch {
-            print("mic: ⚠️ engine restart failed: \(error)")
+            log("mic: ⚠️ engine restart failed: \(error)")
         }
     }
 

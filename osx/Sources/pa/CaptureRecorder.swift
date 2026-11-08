@@ -6,13 +6,13 @@ import PACore
 final class CaptureRecorder: AudioRecorder {
     private var mic: MicCapture?
     private var system: SystemAudioTap?
-    private let log: (String) -> Void
+    private let log: @Sendable (String) -> Void
     /// nil = live preview off (config) / not paired.
     private let makeLive: (RecordingMeta) -> LivePreview?
     private var meta: RecordingMeta?
     private var live: LivePreview?
 
-    init(log: @escaping (String) -> Void, makeLive: @escaping (RecordingMeta) -> LivePreview? = { _ in nil }) {
+    init(log: @escaping @Sendable (String) -> Void, makeLive: @escaping (RecordingMeta) -> LivePreview? = { _ in nil }) {
         self.log = log
         self.makeLive = makeLive
     }
@@ -29,7 +29,7 @@ final class CaptureRecorder: AudioRecorder {
     func start(mic micURL: URL, system systemURL: URL?) throws {
         live = meta.flatMap(makeLive)
         var errors: [String] = []
-        let m = MicCapture()
+        let m = MicCapture(log: log)
         do {
             // Read per recording → `pa set-mic` applies without restarting the daemon.
             try m.start(deviceUID: (try? loadAgentConfig())?.micDeviceUID, writingTo: micURL, sink: live?.sink(.mic))
@@ -40,7 +40,7 @@ final class CaptureRecorder: AudioRecorder {
         }
         // After the mic: creating the tap aggregate reconfigures the mic engine (MicCapture restarts it).
         if let systemURL {
-            let s = SystemAudioTap()
+            let s = SystemAudioTap(log: log)
             do {
                 try s.start(writingTo: systemURL, name: "pa run", sink: live?.sink(.system))
                 system = s

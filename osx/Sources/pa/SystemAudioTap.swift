@@ -11,6 +11,10 @@ final class SystemAudioTap {
     private var procID: AudioDeviceIOProcID?
     private let queue = DispatchQueue(label: "pa.system-tap", qos: .userInitiated)
     private(set) var writer: WavWriter?
+    /// `pa run` → `daemonLog` (timestamped); test-capture → plain stdout.
+    private let log: (String) -> Void
+
+    init(log: @escaping (String) -> Void = { print($0) }) { self.log = log }
 
     /// `name` shows up in Core Audio tools (HALLab, `log stream`) → tells test-capture and `pa run` taps apart.
     func start(writingTo url: URL, name: String = "pa test-capture", sink: (@Sendable (AVAudioPCMBuffer) -> Void)? = nil) throws {
@@ -27,7 +31,7 @@ final class SystemAudioTap {
         let output = try defaultDevice(kAudioHardwarePropertyDefaultOutputDevice)
         let outputUID = try deviceUID(output)
         let alerts = try defaultDevice(kAudioHardwarePropertyDefaultSystemOutputDevice)
-        print("system: aggregate clocked by \(deviceName(output))"
+        log("system: aggregate clocked by \(deviceName(output))"
             + (alerts == output ? "" : " (alert sounds go to \(deviceName(alerts)))"))
         let aggregate: [String: Any] = [
             kAudioAggregateDeviceNameKey: "pa-tap",
@@ -48,7 +52,7 @@ final class SystemAudioTap {
         guard let format = AVAudioFormat(streamDescription: &asbd) else {
             throw CoreAudioError(what: "tap format unsupported by AVAudioFormat", status: -1)
         }
-        print("system: tap format \(describe(format)) → WAV \(describe(WavWriter.fileFormat))")
+        log("system: tap format \(describe(format)) → WAV \(describe(WavWriter.fileFormat))")
         let w = try WavWriter(url: url, inputFormat: format, label: "system", sink: sink)
         writer = w
 
