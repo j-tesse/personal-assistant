@@ -77,6 +77,8 @@ First time on a Mac? Run `osx/mac-check.sh --server <url> --account <you>` (see 
 
 One-time setup: create a self-signed code-signing certificate named `PA Local Signing`. In Keychain Access, go to Certificate Assistant → Create a Certificate…, then pick Identity Type "Self Signed Root" and Certificate Type "Code Signing". Permission grants stick to this signing identity, so they survive rebuilds.
 
+Then run `osx/setup.sh` (safe to re-run, e.g. after a `git pull`). It runs the unit tests, builds both apps, adds a `pa` alias to `~/.zshrc`, and asks whether to start the daemon and menu bar app. If you say yes, it first triggers the permission prompts and then runs `install.sh`. Pair afterwards with `pa pair <server> <account>`. The steps below are the manual equivalents.
+
 ```sh
 cd osx
 swift test             # pure unit tests (on the Linux dev box: osx/test-linux.sh, needs Docker)
