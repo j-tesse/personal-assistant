@@ -50,10 +50,16 @@ fi
 
 echo "== 2. Build PA.app as $new"
 # Keychain ACL (-T) + TCC need the new signed app → build first.
-if ! codesign -dv "$app" 2>&1 | grep -q "^Identifier=$new\$"; then
+# Capture first: `codesign | grep -q` under pipefail fails on a match (grep exits early → codesign SIGPIPE).
+signed_as_new() {
+  local info
+  info=$(codesign -dv "$app" 2>&1) || return 1
+  grep -qx "Identifier=$new" <<<"$info"
+}
+if ! signed_as_new; then
   "$here/build.sh" "$@"
 fi
-codesign -dv "$app" 2>&1 | grep -q "^Identifier=$new\$" || { echo "PA.app not signed as $new." >&2; exit 1; }
+signed_as_new || { echo "PA.app not signed as $new." >&2; exit 1; }
 
 echo "== 3. Move data, caches, logs"
 move_dir "$lib/Application Support/$old" "$lib/Application Support/$new"

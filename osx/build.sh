@@ -8,7 +8,8 @@ BUNDLE_ID="com.riuna.pa"
 APP="build/PA.app"
 
 # No -v: an untrusted self-signed cert is "invalid" to find-identity but signs fine.
-if ! security find-identity -p codesigning | grep -qF "\"$IDENTITY\""; then
+# Captured, not piped into grep -q: early grep exit → SIGPIPE → pipefail = false "missing".
+if ! grep -qF "\"$IDENTITY\"" <<<"$(security find-identity -p codesigning)"; then
   cat >&2 <<EOF
 No code-signing identity "$IDENTITY" in your keychain.
 Create one (once): Keychain Access → Certificate Assistant → Create a Certificate…

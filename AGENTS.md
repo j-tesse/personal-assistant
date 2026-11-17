@@ -274,6 +274,7 @@ The repo has a few components:
 - **Toolchain: Command Line Tools only** (`xcode-select --install`); no Xcode project/IDE. SwiftPM package in `osx/` (`Package.swift`).
 - Targets: `PACore` (pure: arg parsing, level meter; unit-tested) ⟂ `pa` (thin Core Audio/AVFoundation wrappers; tested by running on the Mac).
 - Bundle id **`com.riuna.pa`** (was `com.bitofant.pa` until 2026-10-12; one-time root `migrate-rename.sh` = git remotes github bitofant → j-tesse + execs `osx/migrate-bundle-id.sh` (never run, syntax-checked only): stops old agents, builds, moves app-support/caches/logs, copies Keychain token via `security -i` stdin + `-T` new pa (no re-pair), `tccutil reset` old ids, prompts new TCC grants, `install.sh`. `install.sh` refuses while old plist/app-support dir exists: two daemons = separate `run.lock` → double recording); default signing identity name `PA Local Signing`.
+  - ⚠️ Shell scripts use `pipefail`: never `cmd | grep -q` (grep exits on match → cmd SIGPIPE → pipeline false; broke migrate's signing check on the Mac 2026-11-17). Capture output first (`grep -q … <<<"$(cmd)"`).
 - No swift-argument-parser: too few flags.
 - **Minimal `.app` bundle, still headless** — why: TCC (mic/system audio/calendar) grants attach to a signed bundle id + `Info.plist` usage strings; bare binaries under launchd get flaky/misattributed prompts.
   - `osx/build.sh`: `swift build -c release` → assemble `PA.app/Contents/{Info.plist,MacOS/pa}` → codesign.
