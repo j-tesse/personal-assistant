@@ -22,16 +22,44 @@ ask() { # ask <question> → 0 = yes (default yes)
   case "$a" in n|N|no|NO) return 1 ;; *) return 0 ;; esac
 }
 
-# move_dir <from> <to>: never overwrites; both exist → leave old, say so.
+# move_dir <from> <to>: plain rename if <to> is missing.
 move_dir() {
+  [ -e "$1" ] || return 1
+  [ -e "$2" ] && return 1
+  mkdir -p "$(dirname "$2")"
+  mv "$1" "$2"
+  echo "  moved $1 → $2"
+}
+
+# merge_dir <from> <to>: old files not in new moved over; differing duplicates → <to>/bitofant-conflicts/
+# (never overwrite new, never lose old data); then old dir removed. install.sh refuses while old exists.
+merge_dir() {
+  move_dir "$1" "$2" && return 0
   [ -e "$1" ] || return 0
-  if [ -e "$2" ]; then
-    echo "  ! both exist, kept old: $1 (merge by hand into $2)"
-  else
-    mkdir -p "$(dirname "$2")"
-    mv "$1" "$2"
-    echo "  moved $1 → $2"
-  fi
+  local f rel dst moved=0 conflicts=0
+  while IFS= read -r -d '' f; do
+    rel=${f#"$1"/}
+    dst="$2/$rel"
+    if [ ! -e "$dst" ]; then
+      mkdir -p "$(dirname "$dst")"; mv "$f" "$dst"; moved=$((moved + 1))
+    elif ! cmp -s "$f" "$dst"; then
+      case "$rel" in
+        run.lock|pause.json|note-request.json) ;; # transient daemon state
+        *) dst="$2/bitofant-conflicts/$rel"; mkdir -p "$(dirname "$dst")"; mv "$f" "$dst"; conflicts=$((conflicts + 1)) ;;
+      esac
+    fi
+  done < <(find "$1" -type f -print0)
+  rm -rf "$1"
+  echo "  merged $1 → $2 ($moved moved, old dir removed)"
+  [ "$conflicts" = 0 ] || echo "  ! $conflicts file(s) differed, kept new; old copies in $2/bitofant-conflicts/ (e.g. config.json: compare, then delete)"
+}
+
+# merge_log <from> <to>: old log prepended (agents are stopped), old removed.
+merge_log() {
+  move_dir "$1" "$2" && return 0
+  [ -e "$1" ] || return 0
+  cat "$1" "$2" >"$2.tmp" && mv "$2.tmp" "$2" && rm -f "$1"
+  echo "  merged $1 into $2"
 }
 
 echo "== 1. Stop old agents"
@@ -62,10 +90,11 @@ fi
 signed_as_new || { echo "PA.app not signed as $new." >&2; exit 1; }
 
 echo "== 3. Move data, caches, logs"
-move_dir "$lib/Application Support/$old" "$lib/Application Support/$new"
-move_dir "$lib/Caches/$old" "$lib/Caches/$new"
+merge_dir "$lib/Application Support/$old" "$lib/Application Support/$new"
+# Caches are regenerable: new one wins.
+move_dir "$lib/Caches/$old" "$lib/Caches/$new" || { [ -e "$lib/Caches/$old" ] && rm -rf "$lib/Caches/$old" && echo "  removed $lib/Caches/$old (new cache kept)"; } || true
 for f in "$old" "$old.menu"; do
-  move_dir "$lib/Logs/$f.log" "$lib/Logs/${f/$old/$new}.log"
+  merge_log "$lib/Logs/$f.log" "$lib/Logs/${f/$old/$new}.log"
 done
 for d in "$lib/HTTPStorages/$old" "$lib/HTTPStorages/$old.binarycookies" "$lib/Caches/$old.menu" "$lib/Preferences/$old.plist" "$lib/Preferences/$old.menu.plist"; do
   [ -e "$d" ] && rm -rf "$d" && echo "  removed $d"
